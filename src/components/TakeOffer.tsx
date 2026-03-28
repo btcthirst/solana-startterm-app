@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 
 import { getTakeOfferInstructionAsync } from '../generated';
+import { ESCROW_PROGRAM_ADDRESS } from '../generated/programs/escrow';
 import { fetchAllOffers, type OfferAccount } from '../lib/fetchOffers';
 import { executeTransaction } from '../lib/executeTransaction';
+import { rpcSubscriptions } from '../lib/rpc';
 import { OfferCard } from './ui/offerCard';
 
 
@@ -48,6 +50,39 @@ export function TakeOffer() {
     }, []);
 
     useEffect(() => { void loadOffers(); }, [loadOffers]);
+
+    /* ── WebSockets Auto-Refresh ───────────────────────────── */
+    useEffect(() => {
+        let abortController = new AbortController();
+        let timeout: ReturnType<typeof setTimeout>;
+
+        async function setupWebsocket() {
+            try {
+                const notifications = await rpcSubscriptions
+                    .programNotifications(
+                        address(ESCROW_PROGRAM_ADDRESS),
+                        { commitment: 'confirmed' }
+                    )
+                    .subscribe({ abortSignal: abortController.signal });
+
+                for await (const _notif of notifications) {
+                    // Debounce refresh to avoid spam if multiple transactions occur
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        void loadOffers();
+                    }, 500);
+                }
+            } catch (e: any) {
+                if (e.name !== 'AbortError') console.error('WS Error:', e);
+            }
+        }
+        setupWebsocket();
+
+        return () => {
+            clearTimeout(timeout);
+            abortController.abort();
+        };
+    }, [loadOffers]);
 
     /* ── Take handler ──────────────────────────────────────── */
     async function handleTake(offer: OfferAccount): Promise<{ sig: string } | { error: string }> {
