@@ -158,8 +158,8 @@ export function WalletButton() {
     if (connected && wallet) {
         return (
             <ConnectedMenu
-                address={wallet.account.address}
-                walletIcon={wallet.connector.icon}
+                address={String(wallet.account.address)}
+                walletIcon={wallet.connector?.icon}
                 onDisconnect={disconnect}
             />
         );

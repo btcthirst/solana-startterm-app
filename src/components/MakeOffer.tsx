@@ -37,7 +37,7 @@ export function MakeOffer() {
 
     // Token A — from wallet
     const { tokens, loading: tokensLoading, error: tokensError } = useTokenAccounts(
-        wallet?.account.address ?? null,
+        wallet ? String(wallet.account.address) : null,
     );
     const [tokenA, setTokenA] = useState<TokenAccount | null>(null);
     const [amountA, setAmountA] = useState('');
@@ -71,10 +71,10 @@ export function MakeOffer() {
         setTxError(null);
 
         try {
-            const signer = createWalletTransactionSigner(wallet);
+            const { signer } = createWalletTransactionSigner(wallet);
 
             const ix = await getMakeOfferInstructionAsync({
-                maker: signer.signer,
+                maker: signer,
                 tokenMintA: address(tokenA.mint),
                 tokenMintB: address(mintB.trim() as `${string}`),
                 id: BigInt(Date.now()),
@@ -82,7 +82,7 @@ export function MakeOffer() {
                 tokenBWantedAmount: BigInt(Math.round(parsedAmountB * 10 ** 6)),
             });
 
-            const sig = await executeTransaction(signer.signer, [ix]);
+            const sig = await executeTransaction(signer, [ix]);
             setSignature(sig);
             setTxStatus('success');
             // reset form
