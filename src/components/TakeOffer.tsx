@@ -62,8 +62,7 @@ export function TakeOffer() {
                 offer: address(offer.pubkey as `${string}`),
             });
             const sig = await executeTransaction(signer.signer, [ix]);
-            // Remove this offer from the list after success
-            setOffers((prev) => prev.filter((o) => o.pubkey !== offer.pubkey));
+            // Allow the OfferCard to display the success state and link
             return { sig };
         } catch (err) {
             return { error: parseError(err) };

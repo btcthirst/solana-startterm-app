@@ -74,11 +74,11 @@ yarn build
 *(For the developer submitting this assignment: Fill in the placeholders below before pushing)*
 
 ### Live Deployment
-👉 **Live Demo:** `[https://solana-startterm-app.vercel.app — Vercel/Netlify/GitHub Pages]`
+👉 **Live Demo:** [https://solana-startterm-app.vercel.app](https://solana-startterm-app.vercel.app)
 
 ### Devnet Transaction Examples
 👉 **Make Offer TX:** [`https://explorer.solana.com/tx/5fuGGjb8j7TzkmiAfd2omjE3MXnHecYAfdGierTLj378j5UGBP5hEtW5CBZCh5p8kSySAWzoYG8m3L147zT8jnYu?cluster=devnet`](https://explorer.solana.com/)
-👉 **Take Offer TX:** [`https://explorer.solana.com/tx/YOUR_TX_SIGNATURE_HERE?cluster=devnet`](https://explorer.solana.com/)
+👉 **Take Offer TX:** [`https://explorer.solana.com/tx/4V9fiP44xa6gWMq8TvnAnrptrGbp31oLNYPdX21rZxhnb5SpLZLRqzEkYBJX88ufRobyNs9trVf9j1Ace6fGqhse?cluster=devnet`](https://explorer.solana.com/)
 
 ---
 
