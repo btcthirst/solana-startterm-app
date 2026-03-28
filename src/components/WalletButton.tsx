@@ -21,9 +21,9 @@ export function WalletButton() {
     }
 
     return (
-        <>
+        <div className="relative">
             <button
-                onClick={() => setShowModal(true)}
+                onClick={() => setShowModal(!showModal)}
                 className={cn(
                     'flex items-center gap-2 rounded-lg border border-blue-600 bg-blue-600/10',
                     'px-4 py-2 text-sm font-medium text-blue-400 transition-colors',
@@ -33,7 +33,12 @@ export function WalletButton() {
                 <Wallet className="h-4 w-4" />
                 Connect wallet
             </button>
-            {showModal && <WalletModal onClose={() => setShowModal(false)} />}
-        </>
+            {showModal && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowModal(false)} />
+                    <WalletModal onClose={() => setShowModal(false)} />
+                </>
+            )}
+        </div>
     );
 }

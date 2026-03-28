@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { WalletButton } from './components/WalletButton';
 import { MakeOffer } from './components/MakeOffer';
 import { TakeOffer } from './components/TakeOffer';
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 
 type Tab = 'make' | 'take';
 
@@ -40,7 +41,9 @@ export default function App() {
         </div>
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {tab === 'make' ? <MakeOffer /> : <TakeOffer />}
+          <GlobalErrorBoundary>
+            {tab === 'make' ? <MakeOffer /> : <TakeOffer />}
+          </GlobalErrorBoundary>
         </div>
       </main>
     </div>

@@ -3,7 +3,7 @@ import { useWalletConnection } from '@solana/react-hooks';
 import { createWalletTransactionSigner } from '@solana/client';
 import { address } from '@solana/kit';
 import {
-    RefreshCw, Loader2, AlertCircle, Inbox,
+    RefreshCw, AlertCircle, Inbox,
 } from 'lucide-react';
 
 import { getTakeOfferInstructionAsync } from '../generated';
@@ -130,9 +130,39 @@ export function TakeOffer() {
 
             {/* Loading skeleton */}
             {loading && (
-                <div className="flex items-center justify-center py-12 text-slate-400 gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="text-sm">Fetching offers…</span>
+                <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-2xl border border-white/5 bg-slate-900/20 backdrop-blur-md p-5 space-y-4 animate-pulse">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="h-3 w-32 bg-slate-800 rounded-md"></div>
+                                <div className="h-3 w-16 bg-slate-800 rounded-md"></div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 rounded-xl bg-slate-950/30 border border-white/5 p-3 h-[72px] flex flex-col justify-end">
+                                    <div className="h-2 w-20 bg-slate-800 rounded mb-2"></div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-800"></div>
+                                        <div className="space-y-1.5 flex-1">
+                                            <div className="h-3 w-16 bg-slate-800 rounded"></div>
+                                            <div className="h-2 w-10 bg-slate-800 rounded"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 shrink-0 z-10 -mx-3"></div>
+                                <div className="flex-1 rounded-xl bg-slate-950/30 border border-white/5 p-3 h-[72px] flex flex-col justify-end">
+                                    <div className="h-2 w-20 bg-slate-800 rounded mb-2"></div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-800"></div>
+                                        <div className="space-y-1.5 flex-1">
+                                            <div className="h-3 w-16 bg-slate-800 rounded"></div>
+                                            <div className="h-2 w-10 bg-slate-800 rounded"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="h-10 w-full bg-slate-800 rounded-xl"></div>
+                        </div>
+                    ))}
                 </div>
             )}
 

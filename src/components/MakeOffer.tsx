@@ -145,7 +145,13 @@ export function MakeOffer() {
                         step="any"
                         placeholder="0.00"
                         value={amountA}
-                        onChange={(e) => setAmountA(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && tokenA && val.includes('.')) {
+                                if (val.split('.')[1].length > tokenA.decimals) return;
+                            }
+                            setAmountA(val);
+                        }}
                         disabled={!tokenA || txStatus === 'pending'}
                         className={
                             'w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm ' +
@@ -189,7 +195,13 @@ export function MakeOffer() {
                         step="any"
                         placeholder="0.00"
                         value={amountB}
-                        onChange={(e) => setAmountB(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && val.includes('.')) {
+                                if (val.split('.')[1].length > 6) return;
+                            }
+                            setAmountB(val);
+                        }}
                         disabled={txStatus === 'pending'}
                         className={
                             'w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm ' +

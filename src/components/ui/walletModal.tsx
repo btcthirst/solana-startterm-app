@@ -19,15 +19,10 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
     }
 
     return (
-        /* backdrop */
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            ref={ref}
+            className="absolute right-0 top-full mt-2 w-72 z-50 rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden"
         >
-            <div
-                ref={ref}
-                className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
-            >
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                     <h2 className="text-base font-semibold text-slate-100">Connect wallet</h2>
@@ -72,7 +67,6 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
                 <p className="px-5 pb-4 text-center text-xs text-slate-500">
                     By connecting, you agree to interact with Solana Devnet.
                 </p>
-            </div>
         </div>
     );
 }
