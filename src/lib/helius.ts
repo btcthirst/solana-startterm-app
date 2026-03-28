@@ -53,3 +53,14 @@ export async function getTokenAccounts(ownerAddress: string): Promise<TokenAccou
             };
         });
 }
+
+export async function getAssetBatch(ids: string[]) {
+    if (!ids.length) return [];
+    try {
+        const result = await heliusPost('getAssetBatch', { ids });
+        return result || [];
+    } catch (e) {
+        console.warn('getAssetBatch failed:', e);
+        return [];
+    }
+}

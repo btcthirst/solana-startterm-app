@@ -10,6 +10,7 @@ import { useTokenAccounts } from '../hooks/useTokenAccounts';
 import { TokenSelect } from './TokenSelect';
 import { TransactionStatus, type TxStatus } from './TransactionStatus';
 import type { TokenAccount } from '../lib/helius';
+import { Label } from './ui/label';
 
 /* ─── helpers ──────────────────────────────────────────────────────────── */
 
@@ -22,12 +23,6 @@ function parseError(err: unknown): string {
         return msg.slice(0, 140);
     }
     return 'Unknown error.';
-}
-
-/* ─── Field label ───────────────────────────────────────────────────────── */
-
-function Label({ children }: { children: React.ReactNode }) {
-    return <label className="block text-xs font-medium text-slate-400 mb-1.5">{children}</label>;
 }
 
 /* ─── MakeOffer ─────────────────────────────────────────────────────────── */

@@ -3,14 +3,14 @@ import { useWalletConnection } from '@solana/react-hooks';
 import { createWalletTransactionSigner } from '@solana/client';
 import { address } from '@solana/kit';
 import {
-    RefreshCw, Loader2, AlertCircle, ExternalLink, ArrowRightLeft, Inbox,
+    RefreshCw, Loader2, AlertCircle, Inbox,
 } from 'lucide-react';
 
 import { getTakeOfferInstructionAsync } from '../generated';
 import { fetchAllOffers, type OfferAccount } from '../lib/fetchOffers';
 import { executeTransaction } from '../lib/executeTransaction';
-import { TransactionStatus, type TxStatus } from './TransactionStatus';
-import { shortenAddress } from '../lib/utils';
+import { OfferCard } from './ui/offerCard';
+
 
 /* ─── Error helper ────────────────────────────────────────────────────── */
 
@@ -23,110 +23,6 @@ function parseError(err: unknown): string {
         return msg.slice(0, 140);
     }
     return 'Unknown error.';
-}
-
-/* ─── Offer Card ──────────────────────────────────────────────────────── */
-
-interface OfferCardState {
-    status: TxStatus;
-    signature: string | null;
-    error: string | null;
-}
-
-function OfferCard({
-    offer,
-    onTake,
-}: {
-    offer: OfferAccount;
-    onTake: (offer: OfferAccount) => Promise<{ sig: string } | { error: string }>;
-}) {
-    const { data } = offer;
-    const [state, setState] = useState<OfferCardState>({ status: 'idle', signature: null, error: null });
-    const { connected } = useWalletConnection();
-
-    async function handleTake() {
-        setState({ status: 'pending', signature: null, error: null });
-        const result = await onTake(offer);
-        if ('sig' in result) {
-            setState({ status: 'success', signature: result.sig, error: null });
-        } else {
-            setState({ status: 'error', signature: null, error: result.error });
-        }
-    }
-
-    const done = state.status === 'success';
-
-    return (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 transition-colors hover:border-slate-700">
-            {/* Header row */}
-            <div className="flex items-start justify-between gap-2">
-                <div className="text-xs text-slate-400">
-                    Maker:{' '}
-                    <a
-                        href={`https://explorer.solana.com/address/${data.maker}?cluster=devnet`}
-                        target="_blank" rel="noreferrer"
-                        className="font-mono text-slate-300 hover:text-blue-400 transition-colors"
-                        title={data.maker}
-                    >
-                        {shortenAddress(data.maker, 6)}
-                    </a>
-                </div>
-                <span className="text-xs text-slate-500 font-mono">#{String(data.id).slice(-6)}</span>
-            </div>
-
-            {/* Token swap info */}
-            <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex-1 rounded-lg bg-slate-800/80 px-3 py-2 min-w-0">
-                    <div className="text-xs text-slate-500 mb-0.5">Offers (Token A)</div>
-                    <div className="text-xs font-mono text-slate-300 truncate" title={data.tokenMintA}>
-                        {shortenAddress(data.tokenMintA, 8)}
-                    </div>
-                </div>
-                <ArrowRightLeft className="h-4 w-4 text-slate-500 shrink-0" />
-                <div className="flex-1 rounded-lg bg-slate-800/80 px-3 py-2 min-w-0">
-                    <div className="text-xs text-slate-500 mb-0.5">Wants (Token B)</div>
-                    <div className="text-xs font-mono text-slate-300 truncate" title={data.tokenMintB}>
-                        {shortenAddress(data.tokenMintB, 8)}
-                    </div>
-                    <div className="text-xs text-blue-400 font-semibold mt-0.5">
-                        {(Number(data.tokenBWantedAmount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                    </div>
-                </div>
-            </div>
-
-            {/* Take button */}
-            {!done && (
-                <button
-                    onClick={handleTake}
-                    disabled={!connected || state.status === 'pending'}
-                    className={
-                        'w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
-                        'bg-green-600/20 text-green-400 border border-green-600/30 ' +
-                        'hover:bg-green-600/30 hover:border-green-500 ' +
-                        'disabled:cursor-not-allowed disabled:opacity-50'
-                    }
-                >
-                    {state.status === 'pending' ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
-                    ) : (
-                        <>Take Offer</>
-                    )}
-                </button>
-            )}
-
-            <TransactionStatus status={state.status} signature={state.signature} error={state.error} />
-
-            {/* Explorer link for offer account */}
-            <a
-                href={`https://explorer.solana.com/address/${offer.pubkey}?cluster=devnet`}
-                target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-            >
-                <ExternalLink className="h-3 w-3" />
-                View offer account
-            </a>
-        </div>
-    );
 }
 
 /* ─── TakeOffer ────────────────────────────────────────────────────────── */
