@@ -22,6 +22,7 @@ function parseError(err: unknown): string {
         if (msg.includes('User rejected')) return 'Transaction rejected by user.';
         if (msg.includes('Blockhash not found') || msg.includes('blockhash')) return 'Blockhash expired — please try again.';
         if (msg.includes('insufficient')) return 'Insufficient balance.';
+        if (err.message.includes('-32002')) return "Transaction rejected by smart contract or insufficient funds";
         return msg.slice(0, 140);
     }
     return 'Unknown error.';
