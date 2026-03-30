@@ -4,6 +4,9 @@ import { OFFER_DISCRIMINATOR, getOfferDecoder, type Offer } from '../generated/a
 import { ESCROW_PROGRAM_ADDRESS } from '../generated/programs/escrow';
 import { getAssetBatch } from './helius';
 
+/**
+ * Metadata for a specific Solana SPL Token.
+ */
 export interface TokenMeta {
     symbol: string;
     name: string;
@@ -11,6 +14,9 @@ export interface TokenMeta {
     logo?: string;
 }
 
+/**
+ * Represents a parsed Escrow Offer account with enriched token metadata and balances.
+ */
 export interface OfferAccount {
     pubkey: string;
     data: Offer;
@@ -37,8 +43,14 @@ function discriminatorMatches(data: Uint8Array): boolean {
     return true;
 }
 
+/**
+ * Fetches all active escrow offers from the blockchain and enriches them
+ * with vault balances and token metadata using Helius DAS.
+ * 
+ * @returns A promise resolving to an array of enriched offer accounts.
+ */
 export async function fetchAllOffers(): Promise<OfferAccount[]> {
-    // 1. Fetch raw offer accounts
+    // 1. Fetch raw offer accounts using the program's discriminator
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await (rpc.getProgramAccounts as any)(
         address(ESCROW_PROGRAM_ADDRESS) as Address,
@@ -66,7 +78,7 @@ export async function fetchAllOffers(): Promise<OfferAccount[]> {
 
     if (offers.length === 0) return [];
 
-    // 2. Fetch Vault balances
+    // Fetch the actual balances of the Token A vaults for each offer
     const TOKEN_PROGRAM_ID = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
     const ATOKEN_PROGRAM_ID = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
@@ -102,8 +114,7 @@ export async function fetchAllOffers(): Promise<OfferAccount[]> {
         }
     }));
 
-    // 3. Fetch Token Metadata (Batch)
-    // Gather all unique mints
+    // Fetch metadata (logos, decimals) from Helius for all unique mints found
     const mintsToFetch = new Set<string>();
     enrichedOffers.forEach(o => {
         mintsToFetch.add(o.data.tokenMintA);

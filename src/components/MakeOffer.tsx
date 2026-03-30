@@ -12,8 +12,12 @@ import { TransactionStatus, type TxStatus } from './TransactionStatus';
 import type { TokenAccount } from '../lib/helius';
 import { Label } from './ui/label';
 
-/* ─── helpers ──────────────────────────────────────────────────────────── */
-
+/**
+ * Standardizes Solana/Wallet error messages for user-friendly display.
+ * 
+ * @param err - The raw error object caught during transaction execution.
+ * @returns A simplified error string.
+ */
 function parseError(err: unknown): string {
     if (err instanceof Error) {
         const msg = err.message;
@@ -25,28 +29,27 @@ function parseError(err: unknown): string {
     return 'Unknown error.';
 }
 
-/* ─── MakeOffer ─────────────────────────────────────────────────────────── */
-
+/**
+ * Component for creating a new Escrow Offer.
+ * Handles selecting a token from the user's wallet (Token A) and specifying
+ * a desired recipient token (Token B) using its mint address.
+ */
 export function MakeOffer() {
     const { connected, wallet } = useWalletConnection();
 
-    // Token A — from wallet
+    // Local state for form inputs and transaction lifecycle
     const { tokens, loading: tokensLoading, error: tokensError } = useTokenAccounts(
         wallet ? String(wallet.account.address) : null,
     );
     const [tokenA, setTokenA] = useState<TokenAccount | null>(null);
     const [amountA, setAmountA] = useState('');
-
-    // Token B — by mint address
     const [mintB, setMintB] = useState('');
     const [amountB, setAmountB] = useState('');
-
-    // TX state
     const [txStatus, setTxStatus] = useState<TxStatus>('idle');
     const [signature, setSignature] = useState<string | null>(null);
     const [txError, setTxError] = useState<string | null>(null);
 
-    /* ── Validation ──────────────────────────────────────── */
+    // Derived validation state
     const parsedAmountA = parseFloat(amountA);
     const parsedAmountB = parseFloat(amountB);
 
@@ -56,7 +59,10 @@ export function MakeOffer() {
         mintB.trim().length >= 32 &&
         !isNaN(parsedAmountB) && parsedAmountB > 0;
 
-    /* ── Submit ──────────────────────────────────────────── */
+    /**
+     * Executes the 'make_offer' transaction on-chain.
+     * Converts UI amounts to raw BigInts based on token decimals.
+     */
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!isValid || !wallet || !tokenA) return;

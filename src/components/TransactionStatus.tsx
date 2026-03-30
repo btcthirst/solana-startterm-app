@@ -1,7 +1,14 @@
 import { Loader2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 
+/**
+ * Represents the lifecycle of a Solana transaction in the UI.
+ */
 export type TxStatus = 'idle' | 'pending' | 'success' | 'error';
 
+/**
+ * Component for displaying the current status of a transaction.
+ * Shows loading spinners, success checks with explorer links, or error messages.
+ */
 export function TransactionStatus({ status, signature, error }: {
     status: TxStatus; signature?: string | null; error?: string | null;
 }) {

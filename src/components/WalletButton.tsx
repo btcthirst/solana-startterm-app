@@ -6,6 +6,10 @@ import { WalletModal } from './ui/walletModal';
 import { ConnectedMenu } from './ui/conectedMenu';
 
 
+/**
+ * Main entry point for wallet connection logic.
+ * Toggles between the 'Connect' button (WalletModal) and the user menu (ConnectedMenu).
+ */
 export function WalletButton() {
     const { connected, wallet, disconnect } = useWalletConnection();
     const [showModal, setShowModal] = useState(false);

@@ -1,3 +1,8 @@
+/**
+ * Application Entry Point
+ * Initializes the React root and provides the Solana connection context 
+ * to the entire application using the SolanaProvider.
+ */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";

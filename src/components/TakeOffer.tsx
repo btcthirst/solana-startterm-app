@@ -14,8 +14,12 @@ import { rpcSubscriptions } from '../lib/rpc';
 import { OfferCard } from './ui/offerCard';
 
 
-/* ─── Error helper ────────────────────────────────────────────────────── */
-
+/**
+ * Standardizes Solana/Wallet error messages for user-friendly display.
+ * 
+ * @param err - The raw error object caught during transaction execution.
+ * @returns A simplified error string.
+ */
 function parseError(err: unknown): string {
     if (err instanceof Error) {
         const msg = err.message;
@@ -28,8 +32,10 @@ function parseError(err: unknown): string {
     return 'Unknown error.';
 }
 
-/* ─── TakeOffer ────────────────────────────────────────────────────────── */
-
+/**
+ * Component for browsing and accepting existing Escrow Offers.
+ * Includes real-time updates via Solana WebSockets to stay in sync with the chain.
+ */
 export function TakeOffer() {
     const { connected, wallet } = useWalletConnection();
 
@@ -52,7 +58,10 @@ export function TakeOffer() {
 
     useEffect(() => { void loadOffers(); }, [loadOffers]);
 
-    /* ── WebSockets Auto-Refresh ───────────────────────────── */
+    /**
+     * Set up a WebSocket subscription to listen for program notifications.
+     * Automatically refreshes the offer list when a transaction occurs on the Escrow program.
+     */
     useEffect(() => {
         let abortController = new AbortController();
         let timeout: ReturnType<typeof setTimeout>;
@@ -85,7 +94,12 @@ export function TakeOffer() {
         };
     }, [loadOffers]);
 
-    /* ── Take handler ──────────────────────────────────────── */
+    /**
+     * Executes the 'take_offer' transaction for a specific offer.
+     * 
+     * @param offer - The offer account to accept.
+     * @returns A promise resolving to either the signature or an error message.
+     */
     async function handleTake(offer: OfferAccount): Promise<{ sig: string } | { error: string }> {
         if (!wallet) return { error: 'Wallet not connected.' };
         try {

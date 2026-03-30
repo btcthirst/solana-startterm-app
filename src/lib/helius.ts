@@ -5,15 +5,22 @@ export const HELIUS_RPC = HELIUS_API_KEY
     ? `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
     : RPC_URL;
 
+/**
+ * Represents a token account with both on-chain raw data 
+ * and human-readable metadata.
+ */
 export interface TokenAccount {
     mint: string;
     symbol: string;
     name: string;
     logo?: string;
-    balance: number;      // human-readable (поділено на decimals)
-    rawBalance: bigint;   // raw on-chain bigint
+    /** The balance divided by the token's decimals (e.g., 1.5 SOL). */
+    balance: number;
+    /** The raw on-chain bigint value. */
+    rawBalance: bigint;
     decimals: number;
-    tokenAccount: string; // ATA адреса
+    /** The Associated Token Account (ATA) address. */
+    tokenAccount: string;
 }
 
 async function heliusPost(method: string, params: unknown) {
@@ -27,6 +34,12 @@ async function heliusPost(method: string, params: unknown) {
     return json.result;
 }
 
+/**
+ * Fetches all fungible token accounts for a given owner using the Helius DAS API.
+ * 
+ * @param ownerAddress - The Solana public key of the account to query.
+ * @returns A promise resolving to an array of parsed TokenAccount objects.
+ */
 export async function getTokenAccounts(ownerAddress: string): Promise<TokenAccount[]> {
     const result = await heliusPost('getAssetsByOwner', {
         ownerAddress,
@@ -54,6 +67,12 @@ export async function getTokenAccounts(ownerAddress: string): Promise<TokenAccou
         });
 }
 
+/**
+ * Fetches metadata for a batch of token mints from Helius.
+ * 
+ * @param ids - Array of mint addresses to fetch.
+ * @returns A promise resolving to an array of asset objects.
+ */
 export async function getAssetBatch(ids: string[]) {
     if (!ids.length) return [];
     try {

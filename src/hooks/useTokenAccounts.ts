@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getTokenAccounts, type TokenAccount } from '../lib/helius';
 
+/**
+ * Custom React hook to fetch and manage a user's token accounts and balances.
+ * 
+ * @param ownerAddress - The Solana public key of the wallet owner, or null if not connected.
+ * @returns An object containing the list of tokens, loading state, and any error message.
+ */
 export function useTokenAccounts(ownerAddress: string | null) {
     const [tokens, setTokens] = useState<TokenAccount[]>([]);
     const [loading, setLoading] = useState(false);

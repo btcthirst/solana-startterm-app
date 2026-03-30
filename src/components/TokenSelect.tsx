@@ -3,15 +3,29 @@ import { useState, useRef, useEffect } from 'react';
 import type { TokenAccount } from '../lib/helius';
 import { cn } from '../lib/utils';
 
+/**
+ * Props for the TokenSelect component.
+ */
 interface TokenSelectProps {
+    /** Array of token accounts to display in the dropdown. */
     tokens: TokenAccount[];
+    /** Whether the tokens are currently being fetched. */
     loading: boolean;
+    /** The currently selected token account. */
     value: TokenAccount | null;
+    /** Callback function when a new token is selected. */
     onChange: (token: TokenAccount) => void;
+    /** Placeholder text when no token is selected. */
     placeholder?: string;
+    /** Whether the dropdown is disabled. */
     disabled?: boolean;
 }
 
+/**
+ * A custom dropdown component for selecting a token from a list of user accounts.
+ * Displays token logos, symbols, names, and balances.
+ * Includes 'click away' detection to close the dropdown.
+ */
 export function TokenSelect({
     tokens,
     loading,

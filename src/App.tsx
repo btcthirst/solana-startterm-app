@@ -4,8 +4,16 @@ import { MakeOffer } from './components/MakeOffer';
 import { TakeOffer } from './components/TakeOffer';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 
+/**
+ * Represents the two main logical areas of the escrow application.
+ */
 type Tab = 'make' | 'take';
 
+/**
+ * The Root Component of the Solana Escrow application.
+ * Manages the layout, navigation between 'Make' and 'Take' tabs,
+ * and provides a global error boundary for child components.
+ */
 export default function App() {
   const [tab, setTab] = useState<Tab>('make');
   return (

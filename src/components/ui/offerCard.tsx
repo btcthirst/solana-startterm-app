@@ -5,12 +5,24 @@ import { useState } from 'react';
 import { ArrowRightLeft, ExternalLink, Loader2, Image as ImageIcon } from 'lucide-react';
 import type { OfferAccount } from '../../lib/fetchOffers';
 
+/**
+ * Internal state for tracking the transaction lifecycle of a single offer card.
+ */
 interface OfferCardState {
     status: TxStatus;
     signature: string | null;
     error: string | null;
 }
 
+/**
+ * A visual representation of a single Escrow Offer.
+ * Displays both Token A (offered) and Token B (wanted) details,
+ * along with the maker's address and a 'Take' button.
+ * 
+ * @param props - Component properties.
+ * @param props.offer - The enriched offer account data.
+ * @param props.onTake - Callback to execute the 'take_offer' transaction.
+ */
 export function OfferCard({
     offer,
     onTake,

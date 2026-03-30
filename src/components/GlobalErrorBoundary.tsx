@@ -1,6 +1,10 @@
 import { ErrorBoundary } from 'react-error-boundary';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
+/**
+ * Fallback UI displayed when an error is caught by the error boundary.
+ * Provides details about the error and a way to reset the application state.
+ */
 function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBoundary: () => void }) {
     return (
         <div className="min-h-[400px] flex items-center justify-center p-6">
@@ -31,6 +35,11 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBo
     );
 }
 
+/**
+ * A top-level error boundary that catches unexpected exceptions in the React tree.
+ * Critical for Solana apps to gracefully handle RPC failures or wallet-related crashes
+ * without breaking the entire UI.
+ */
 export function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
     return (
         <ErrorBoundary FallbackComponent={ErrorFallback}>
