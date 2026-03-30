@@ -77,8 +77,8 @@ yarn build
 👉 **Live Demo:** [https://solana-startterm-app.vercel.app](https://solana-startterm-app.vercel.app)
 
 ### Devnet Transaction Examples
-👉 **Make Offer TX:** [`https://explorer.solana.com/tx/5fuGGjb8j7TzkmiAfd2omjE3MXnHecYAfdGierTLj378j5UGBP5hEtW5CBZCh5p8kSySAWzoYG8m3L147zT8jnYu?cluster=devnet`](https://explorer.solana.com/)
-👉 **Take Offer TX:** [`https://explorer.solana.com/tx/4V9fiP44xa6gWMq8TvnAnrptrGbp31oLNYPdX21rZxhnb5SpLZLRqzEkYBJX88ufRobyNs9trVf9j1Ace6fGqhse?cluster=devnet`](https://explorer.solana.com/)
+👉 **Make Offer TX:** [`thttps://explorer.solana.com/`](https://explorer.solana.com/tx/5fuGGjb8j7TzkmiAfd2omjE3MXnHecYAfdGierTLj378j5UGBP5hEtW5CBZCh5p8kSySAWzoYG8m3L147zT8jnYu?cluster=devne)
+👉 **Take Offer TX:** [`https://explorer.solana.com/`](https://explorer.solana.com/tx/4V9fiP44xa6gWMq8TvnAnrptrGbp31oLNYPdX21rZxhnb5SpLZLRqzEkYBJX88ufRobyNs9trVf9j1Ace6fGqhse?cluster=devnet)
 
 ---
 
