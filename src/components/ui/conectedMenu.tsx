@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 export function ConnectedMenu({
     address,
     walletIcon,
+    walletName,
     onDisconnect,
 }: {
     address: string;
     walletIcon?: string;
+    walletName?: string;
     onDisconnect: () => void;
 }) {
     const [open, setOpen] = useState(false);
@@ -40,11 +42,16 @@ export function ConnectedMenu({
                 )}
             >
                 {walletIcon ? (
-                    <img src={walletIcon} alt="wallet" className="h-5 w-5 rounded object-contain" />
+                    <img src={walletIcon} alt={walletName ?? 'wallet'} className="h-5 w-5 rounded object-contain" />
                 ) : (
                     <Wallet className="h-4 w-4 text-slate-400" />
                 )}
-                <span>{shortenAddress(address)}</span>
+                <div className="flex flex-col items-start leading-tight">
+                    {walletName && (
+                        <span className="text-xs text-slate-400 leading-none">{walletName}</span>
+                    )}
+                    <span className="font-mono text-sm leading-tight">{shortenAddress(address)}</span>
+                </div>
                 <ChevronDown className={cn('h-4 w-4 text-slate-400 transition-transform', open && 'rotate-180')} />
             </button>
 

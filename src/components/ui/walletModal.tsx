@@ -1,11 +1,11 @@
-import { Wallet } from "lucide-react";
+import { Wallet, X } from "lucide-react";
 import { useWalletConnection } from "@solana/react-hooks";
-import { useRef, useEffect } from "react";
+import { useEffect } from "react";
 import { cn } from "../../lib/utils";
+import { createPortal } from "react-dom";
 
 export function WalletModal({ onClose }: { onClose: () => void }) {
     const { connectors, connect } = useWalletConnection();
-    const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -18,20 +18,26 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
         onClose();
     }
 
-    return (
+    const modalContent = (
+        /* Backdrop — fixed overlay that covers the full viewport */
         <div
-            ref={ref}
-            className="absolute right-0 top-full mt-2 w-72 z-50 rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
         >
+            {/* Modal panel — stopPropagation prevents backdrop click from closing when clicking inside */}
+            <div
+                className="w-full max-w-sm mx-4 rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                     <h2 className="text-base font-semibold text-slate-100">Connect wallet</h2>
                     <button
                         onClick={onClose}
-                        className="rounded-lg p-1 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+                        className="rounded-lg p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
                         aria-label="Close"
                     >
-                        ✕
+                        <X className="h-4 w-4" />
                     </button>
                 </div>
 
@@ -52,9 +58,9 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
                                 )}
                             >
                                 {c.icon ? (
-                                    <img src={c.icon} alt={c.name} className="h-8 w-8 rounded-lg object-contain" />
+                                    <img src={c.icon} alt={c.name} className="h-8 w-8 rounded-lg object-contain flex-shrink-0" />
                                 ) : (
-                                    <div className="h-8 w-8 rounded-lg bg-slate-700 flex items-center justify-center">
+                                    <div className="h-8 w-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
                                         <Wallet className="h-4 w-4 text-slate-400" />
                                     </div>
                                 )}
@@ -67,6 +73,9 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
                 <p className="px-5 pb-4 text-center text-xs text-slate-500">
                     By connecting, you agree to interact with Solana Devnet.
                 </p>
+            </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

@@ -103,15 +103,15 @@ export function TakeOffer() {
     async function handleTake(offer: OfferAccount): Promise<{ sig: string } | { error: string }> {
         if (!wallet) return { error: 'Wallet not connected.' };
         try {
-            const signer = createWalletTransactionSigner(wallet);
+            const { signer } = createWalletTransactionSigner(wallet);
             const ix = await getTakeOfferInstructionAsync({
-                taker: signer.signer,
+                taker: signer,
                 maker: address(offer.data.maker),
                 tokenMintA: address(offer.data.tokenMintA),
                 tokenMintB: address(offer.data.tokenMintB),
                 offer: address(offer.pubkey as `${string}`),
             });
-            const sig = await executeTransaction(signer.signer, [ix]);
+            const sig = await executeTransaction(signer, [ix]);
             // Allow the OfferCard to display the success state and link
             return { sig };
         } catch (err) {

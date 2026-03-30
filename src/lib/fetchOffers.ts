@@ -4,9 +4,6 @@ import { OFFER_DISCRIMINATOR, getOfferDecoder, type Offer } from '../generated/a
 import { ESCROW_PROGRAM_ADDRESS } from '../generated/programs/escrow';
 import { getAssetBatch } from './helius';
 
-/**
- * Metadata for a specific Solana SPL Token.
- */
 export interface TokenMeta {
     symbol: string;
     name: string;
@@ -14,9 +11,6 @@ export interface TokenMeta {
     logo?: string;
 }
 
-/**
- * Represents a parsed Escrow Offer account with enriched token metadata and balances.
- */
 export interface OfferAccount {
     pubkey: string;
     data: Offer;
@@ -25,6 +19,42 @@ export interface OfferAccount {
     tokenAMeta?: TokenMeta;
     tokenBMeta?: TokenMeta;
 }
+
+// ----- Helius DAS response types -----
+
+interface HeliusTokenInfo {
+    symbol?: string;
+    decimals?: number;
+    balance?: number;
+    associated_token_address?: string;
+}
+
+interface HeliusAssetContent {
+    metadata?: {
+        name?: string;
+        symbol?: string;
+    };
+    links?: {
+        image?: string;
+    };
+}
+
+interface HeliusAsset {
+    id: string;
+    token_info?: HeliusTokenInfo;
+    content?: HeliusAssetContent;
+}
+
+// ----- getProgramAccounts raw response types -----
+
+interface RawProgramAccount {
+    pubkey: string;
+    account: {
+        data: [string, 'base64'];
+    };
+}
+
+// ----- helpers -----
 
 function base64ToUint8Array(base64: string): Uint8Array {
     const binary = atob(base64);
@@ -43,29 +73,32 @@ function discriminatorMatches(data: Uint8Array): boolean {
     return true;
 }
 
-/**
- * Fetches all active escrow offers from the blockchain and enriches them
- * with vault balances and token metadata using Helius DAS.
- * 
- * @returns A promise resolving to an array of enriched offer accounts.
- */
+function parseHeliusAsset(asset: HeliusAsset): TokenMeta {
+    const ti = asset.token_info ?? {};
+    return {
+        symbol: ti.symbol ?? asset.content?.metadata?.symbol ?? '',
+        name: asset.content?.metadata?.name ?? ti.symbol ?? '',
+        decimals: ti.decimals ?? 6,
+        logo: asset.content?.links?.image,
+    };
+}
+
+// ----- main fetch -----
+
 export async function fetchAllOffers(): Promise<OfferAccount[]> {
-    // 1. Fetch raw offer accounts using the program's discriminator
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await (rpc.getProgramAccounts as any)(
+    const response = await (
+        rpc.getProgramAccounts as (
+            address: Address,
+            options: { encoding: 'base64' },
+        ) => { send(): Promise<RawProgramAccount[]> }
+    )(
         address(ESCROW_PROGRAM_ADDRESS) as Address,
         { encoding: 'base64' },
     ).send();
 
-    const items = response as Array<{
-        pubkey: string;
-        account: { data: [string, string] };
-    }>;
-
     const decoder = getOfferDecoder();
-    
-    // Parse valid offers
-    const offers = items.flatMap((item) => {
+
+    const offers = response.flatMap((item) => {
         try {
             const dataBytes = base64ToUint8Array(item.account.data[0]);
             if (!discriminatorMatches(dataBytes)) return [];
@@ -78,72 +111,61 @@ export async function fetchAllOffers(): Promise<OfferAccount[]> {
 
     if (offers.length === 0) return [];
 
-    // Fetch the actual balances of the Token A vaults for each offer
-    const TOKEN_PROGRAM_ID = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-    const ATOKEN_PROGRAM_ID = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const ATOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
-    // Fetch in parallel for speed
-    const enrichedOffers = await Promise.all(offers.map(async (offer) => {
-        try {
-            const [vault] = await getProgramDerivedAddress({
-                programAddress: ATOKEN_PROGRAM_ID,
-                seeds: [
-                    getAddressEncoder().encode(address(offer.pubkey)),
-                    getAddressEncoder().encode(TOKEN_PROGRAM_ID),
-                    getAddressEncoder().encode(address(offer.data.tokenMintA)),
-                ],
-            });
+    const enrichedOffers = await Promise.all(
+        offers.map(async (offer) => {
+            try {
+                const [vault] = await getProgramDerivedAddress({
+                    programAddress: ATOKEN_PROGRAM_ID,
+                    seeds: [
+                        getAddressEncoder().encode(address(offer.pubkey)),
+                        getAddressEncoder().encode(TOKEN_PROGRAM_ID),
+                        getAddressEncoder().encode(address(offer.data.tokenMintA)),
+                    ],
+                });
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const balanceResp = await (rpc.getTokenAccountBalance as any)(vault).send();
-            const tokenAAmountUi = balanceResp?.value?.uiAmount ?? 0;
-            const tokenABalance = balanceResp?.value?.amount ?? "0";
+                const balanceResp = await (
+                    rpc.getTokenAccountBalance as (
+                        address: Address,
+                    ) => { send(): Promise<{ value: { uiAmount: number | null; amount: string } }> }
+                )(vault).send();
 
-            return {
-                ...offer,
-                tokenAAmountUi,
-                tokenABalance: Number(tokenABalance)
-            };
-        } catch (e) {
-            console.warn(`Failed to fetch vault balance for offer: ${offer.pubkey}`, e);
-            return {
-                ...offer,
-                tokenAAmountUi: 0,
-                tokenABalance: 0
-            };
-        }
-    }));
+                const tokenAAmountUi = balanceResp?.value?.uiAmount ?? 0;
+                const tokenABalance = Number(balanceResp?.value?.amount ?? '0');
 
-    // Fetch metadata (logos, decimals) from Helius for all unique mints found
+                return { ...offer, tokenAAmountUi, tokenABalance };
+            } catch (e) {
+                console.warn(`Failed to fetch vault balance for offer: ${offer.pubkey}`, e);
+                return { ...offer, tokenAAmountUi: 0, tokenABalance: 0 };
+            }
+        }),
+    );
+
     const mintsToFetch = new Set<string>();
-    enrichedOffers.forEach(o => {
+    enrichedOffers.forEach((o) => {
         mintsToFetch.add(o.data.tokenMintA);
         mintsToFetch.add(o.data.tokenMintB);
     });
 
-    const mintsArr = Array.from(mintsToFetch);
     const metadataMap = new Map<string, TokenMeta>();
 
     try {
-        const batchMeta = await getAssetBatch(mintsArr);
-        batchMeta.forEach((asset: any) => {
-            if (!asset || !asset.id) return;
-            const ti = asset.token_info || {};
-            metadataMap.set(asset.id, {
-                symbol: ti.symbol || asset.content?.metadata?.symbol || '',
-                name: asset.content?.metadata?.name || ti.symbol || '',
-                decimals: ti.decimals ?? 6,
-                logo: asset.content?.links?.image
-            });
+        const batchMeta = await getAssetBatch(Array.from(mintsToFetch)) as HeliusAsset[];
+        batchMeta.forEach((asset) => {
+            if (!asset?.id) return;
+            metadataMap.set(asset.id, parseHeliusAsset(asset));
         });
     } catch (e) {
-        console.warn("Mints metadata fetch failed", e);
+        console.warn('Mints metadata fetch failed', e);
     }
 
-    // Assign metadata to offers
-    return enrichedOffers.map(o => ({
+    const fallback: TokenMeta = { symbol: '', name: '', decimals: 6 };
+
+    return enrichedOffers.map((o) => ({
         ...o,
-        tokenAMeta: metadataMap.get(o.data.tokenMintA) ?? { symbol: '', name: '', decimals: 6 },
-        tokenBMeta: metadataMap.get(o.data.tokenMintB) ?? { symbol: '', name: '', decimals: 6 },
+        tokenAMeta: metadataMap.get(o.data.tokenMintA) ?? fallback,
+        tokenBMeta: metadataMap.get(o.data.tokenMintB) ?? fallback,
     }));
 }

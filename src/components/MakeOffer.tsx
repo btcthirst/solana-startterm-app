@@ -2,22 +2,17 @@ import { useState } from 'react';
 import { useWalletConnection } from '@solana/react-hooks';
 import { createWalletTransactionSigner } from '@solana/client';
 import { address } from '@solana/kit';
-import { ArrowRightLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRightLeft, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 import { getMakeOfferInstructionAsync } from '../generated';
 import { executeTransaction } from '../lib/executeTransaction';
 import { useTokenAccounts } from '../hooks/useTokenAccounts';
+import { useMintDecimals } from '../hooks/useMintDecimals';
 import { TokenSelect } from './TokenSelect';
 import { TransactionStatus, type TxStatus } from './TransactionStatus';
 import type { TokenAccount } from '../lib/helius';
 import { Label } from './ui/label';
 
-/**
- * Standardizes Solana/Wallet error messages for user-friendly display.
- * 
- * @param err - The raw error object caught during transaction execution.
- * @returns A simplified error string.
- */
 function parseError(err: unknown): string {
     if (err instanceof Error) {
         const msg = err.message;
@@ -29,15 +24,9 @@ function parseError(err: unknown): string {
     return 'Unknown error.';
 }
 
-/**
- * Component for creating a new Escrow Offer.
- * Handles selecting a token from the user's wallet (Token A) and specifying
- * a desired recipient token (Token B) using its mint address.
- */
 export function MakeOffer() {
     const { connected, wallet } = useWalletConnection();
 
-    // Local state for form inputs and transaction lifecycle
     const { tokens, loading: tokensLoading, error: tokensError } = useTokenAccounts(
         wallet ? String(wallet.account.address) : null,
     );
@@ -49,20 +38,25 @@ export function MakeOffer() {
     const [signature, setSignature] = useState<string | null>(null);
     const [txError, setTxError] = useState<string | null>(null);
 
-    // Derived validation state
+    const mintBDecimals = useMintDecimals(mintB);
+
     const parsedAmountA = parseFloat(amountA);
     const parsedAmountB = parseFloat(amountB);
 
+    const mintBReady =
+        mintB.trim().length >= 32 &&
+        !mintBDecimals.loading &&
+        !mintBDecimals.error;
+
     const isValid =
         tokenA !== null &&
-        !isNaN(parsedAmountA) && parsedAmountA > 0 && parsedAmountA <= tokenA.balance &&
-        mintB.trim().length >= 32 &&
-        !isNaN(parsedAmountB) && parsedAmountB > 0;
+        !isNaN(parsedAmountA) &&
+        parsedAmountA > 0 &&
+        parsedAmountA <= tokenA.balance &&
+        mintBReady &&
+        !isNaN(parsedAmountB) &&
+        parsedAmountB > 0;
 
-    /**
-     * Executes the 'make_offer' transaction on-chain.
-     * Converts UI amounts to raw BigInts based on token decimals.
-     */
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!isValid || !wallet || !tokenA) return;
@@ -80,13 +74,12 @@ export function MakeOffer() {
                 tokenMintB: address(mintB.trim() as `${string}`),
                 id: BigInt(Date.now()),
                 tokenAOfferedAmount: BigInt(Math.round(parsedAmountA * 10 ** tokenA.decimals)),
-                tokenBWantedAmount: BigInt(Math.round(parsedAmountB * 10 ** 6)),
+                tokenBWantedAmount: BigInt(Math.round(parsedAmountB * 10 ** mintBDecimals.decimals)),
             });
 
             const sig = await executeTransaction(signer, [ix]);
             setSignature(sig);
             setTxStatus('success');
-            // reset form
             setTokenA(null);
             setAmountA('');
             setMintB('');
@@ -96,8 +89,6 @@ export function MakeOffer() {
             setTxStatus('error');
         }
     }
-
-    /* ── Render ──────────────────────────────────────────── */
 
     if (!connected) {
         return (
@@ -178,23 +169,54 @@ export function MakeOffer() {
 
                 <div>
                     <Label>Token B mint address</Label>
-                    <input
-                        type="text"
-                        placeholder="Paste SPL token mint address…"
-                        value={mintB}
-                        onChange={(e) => setMintB(e.target.value)}
-                        disabled={txStatus === 'pending'}
-                        className={
-                            'w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm ' +
-                            'text-slate-100 placeholder-slate-500 font-mono transition-colors ' +
-                            'focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ' +
-                            'disabled:cursor-not-allowed disabled:opacity-50'
-                        }
-                    />
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Paste SPL token mint address..."
+                            value={mintB}
+                            onChange={(e) => { setMintB(e.target.value); setAmountB(''); }}
+                            disabled={txStatus === 'pending'}
+                            className={
+                                'w-full rounded-lg border bg-slate-800/60 px-3 py-2.5 pr-9 text-sm ' +
+                                'text-slate-100 placeholder-slate-500 font-mono transition-colors ' +
+                                'focus:outline-none focus:ring-1 ' +
+                                (mintBDecimals.error
+                                    ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500'
+                                    : mintBReady
+                                        ? 'border-green-500/60 focus:border-green-500 focus:ring-green-500'
+                                        : 'border-slate-700 focus:border-blue-500 focus:ring-blue-500') +
+                                ' disabled:cursor-not-allowed disabled:opacity-50'
+                            }
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                            {mintBDecimals.loading && (
+                                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                            )}
+                            {!mintBDecimals.loading && mintBReady && (
+                                <CheckCircle2 className="h-4 w-4 text-green-400" />
+                            )}
+                        </div>
+                    </div>
+
+                    {mintBDecimals.error && mintB.trim().length >= 32 && (
+                        <p className="mt-1 text-xs text-red-400">{mintBDecimals.error}</p>
+                    )}
+                    {mintBReady && (
+                        <p className="mt-1 text-xs text-green-400">
+                            Mint found — {mintBDecimals.decimals} decimal{mintBDecimals.decimals !== 1 ? 's' : ''}
+                        </p>
+                    )}
                 </div>
 
                 <div>
-                    <Label>Amount B wanted</Label>
+                    <Label>
+                        Amount B wanted
+                        {mintBReady && (
+                            <span className="ml-1 text-slate-500">
+                                (max {mintBDecimals.decimals} decimal{mintBDecimals.decimals !== 1 ? 's' : ''})
+                            </span>
+                        )}
+                    </Label>
                     <input
                         type="number"
                         min="0"
@@ -203,12 +225,12 @@ export function MakeOffer() {
                         value={amountB}
                         onChange={(e) => {
                             const val = e.target.value;
-                            if (val && val.includes('.')) {
-                                if (val.split('.')[1].length > 6) return;
+                            if (val && val.includes('.') && mintBReady) {
+                                if (val.split('.')[1].length > mintBDecimals.decimals) return;
                             }
                             setAmountB(val);
                         }}
-                        disabled={txStatus === 'pending'}
+                        disabled={!mintBReady || txStatus === 'pending'}
                         className={
                             'w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm ' +
                             'text-slate-100 placeholder-slate-500 transition-colors ' +
