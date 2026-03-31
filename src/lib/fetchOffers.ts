@@ -1,4 +1,5 @@
 import { address, type Address, getProgramDerivedAddress, getAddressEncoder } from '@solana/kit';
+import type { Base64EncodedBytes } from '@solana/rpc-types';
 import { rpc } from './rpc';
 import { OFFER_DISCRIMINATOR, getOfferDecoder, type Offer } from '../generated/accounts/offer';
 import { ESCROW_PROGRAM_ADDRESS } from '../generated/programs/escrow';
@@ -45,15 +46,6 @@ interface HeliusAsset {
     content?: HeliusAssetContent;
 }
 
-// ----- getProgramAccounts raw response types -----
-
-interface RawProgramAccount {
-    pubkey: string;
-    account: {
-        data: [string, 'base64'];
-    };
-}
-
 // ----- helpers -----
 
 function base64ToUint8Array(base64: string): Uint8Array {
@@ -63,14 +55,6 @@ function base64ToUint8Array(base64: string): Uint8Array {
         bytes[i] = binary.charCodeAt(i);
     }
     return bytes;
-}
-
-function discriminatorMatches(data: Uint8Array): boolean {
-    if (data.length < 8) return false;
-    for (let i = 0; i < 8; i++) {
-        if (data[i] !== OFFER_DISCRIMINATOR[i]) return false;
-    }
-    return true;
 }
 
 function parseHeliusAsset(asset: HeliusAsset): TokenMeta {
@@ -86,28 +70,41 @@ function parseHeliusAsset(asset: HeliusAsset): TokenMeta {
 // ----- main fetch -----
 
 export async function fetchAllOffers(): Promise<OfferAccount[]> {
-    const response = await (
-        rpc.getProgramAccounts as (
-            address: Address,
-            options: { encoding: 'base64' },
-        ) => { send(): Promise<RawProgramAccount[]> }
-    )(
+    // Discriminator у base64 — валідатор фільтрує на своєму боці,
+    // по мережі приходять лише Offer акаунти.
+    const discriminatorBase64 = btoa(
+        String.fromCharCode(...OFFER_DISCRIMINATOR)
+    ) as Base64EncodedBytes;
+
+    const response = await rpc.getProgramAccounts(
         address(ESCROW_PROGRAM_ADDRESS) as Address,
-        { encoding: 'base64' },
+        {
+            encoding: 'base64',
+            filters: [
+                {
+                    memcmp: {
+                        offset: 0n,
+                        bytes: discriminatorBase64,
+                        encoding: 'base64',
+                    },
+                },
+            ],
+        },
     ).send();
 
     const decoder = getOfferDecoder();
 
-    const offers = response.flatMap((item) => {
-        try {
-            const dataBytes = base64ToUint8Array(item.account.data[0]);
-            if (!discriminatorMatches(dataBytes)) return [];
-            const offer = decoder.decode(dataBytes) as Offer;
-            return [{ pubkey: item.pubkey, data: offer }];
-        } catch {
-            return [];
-        }
-    });
+    // Локальна перевірка discriminator залишається як страховка
+    const offers = (response as Array<{ pubkey: string; account: { data: [string, 'base64'] } }>)
+        .flatMap((item) => {
+            try {
+                const dataBytes = base64ToUint8Array(item.account.data[0]);
+                const offer = decoder.decode(dataBytes) as Offer;
+                return [{ pubkey: item.pubkey, data: offer }];
+            } catch {
+                return [];
+            }
+        });
 
     if (offers.length === 0) return [];
 

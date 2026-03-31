@@ -66,10 +66,10 @@ export function MakeOffer() {
         setTxError(null);
 
         try {
-            const signer = createWalletTransactionSigner(wallet);
+            const {signer} = createWalletTransactionSigner(wallet);
 
             const ix = await getMakeOfferInstructionAsync({
-                maker: signer.signer,
+                maker: signer,
                 tokenMintA: address(tokenA.mint),
                 tokenMintB: address(mintB.trim() as `${string}`),
                 id: BigInt(Date.now()),
@@ -77,7 +77,7 @@ export function MakeOffer() {
                 tokenBWantedAmount: BigInt(Math.round(parsedAmountB * 10 ** mintBDecimals.decimals)),
             });
 
-            const sig = await executeTransaction(signer.signer, [ix]);
+            const sig = await executeTransaction(signer, [ix]);
             setSignature(sig);
             setTxStatus('success');
             setTokenA(null);

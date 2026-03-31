@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnection } from '@solana/react-hooks';
 import { createWalletTransactionSigner } from '@solana/client';
 import { address } from '@solana/kit';
-import {
-    RefreshCw, AlertCircle, Inbox,
-} from 'lucide-react';
+import { RefreshCw, AlertCircle, Inbox } from 'lucide-react';
 
 import { getTakeOfferInstructionAsync } from '../generated';
 import { ESCROW_PROGRAM_ADDRESS } from '../generated/programs/escrow';
@@ -13,35 +11,28 @@ import { executeTransaction } from '../lib/executeTransaction';
 import { rpcSubscriptions } from '../lib/rpc';
 import { OfferCard } from './ui/offerCard';
 
+type Filter = 'all' | 'mine';
 
-/**
- * Standardizes Solana/Wallet error messages for user-friendly display.
- * 
- * @param err - The raw error object caught during transaction execution.
- * @returns A simplified error string.
- */
 function parseError(err: unknown): string {
     if (err instanceof Error) {
         const msg = err.message;
         if (msg.includes('User rejected')) return 'Transaction rejected by user.';
         if (msg.includes('Blockhash not found') || msg.includes('blockhash')) return 'Blockhash expired — please try again.';
         if (msg.includes('insufficient')) return 'Insufficient balance.';
-        if (err.message.includes('-32002')) return "Transaction rejected by smart contract or insufficient funds";
+        if (msg.includes('-32002')) return 'Transaction rejected by smart contract or insufficient funds.';
         return msg.slice(0, 140);
     }
     return 'Unknown error.';
 }
 
-/**
- * Component for browsing and accepting existing Escrow Offers.
- * Includes real-time updates via Solana WebSockets to stay in sync with the chain.
- */
 export function TakeOffer() {
     const { connected, wallet } = useWalletConnection();
+    const walletAddress = wallet ? String(wallet.account.address) : null;
 
     const [offers, setOffers] = useState<OfferAccount[]>([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [filter, setFilter] = useState<Filter>('all');
 
     const loadOffers = useCallback(async () => {
         setLoading(true);
@@ -58,10 +49,6 @@ export function TakeOffer() {
 
     useEffect(() => { void loadOffers(); }, [loadOffers]);
 
-    /**
-     * Set up a WebSocket subscription to listen for program notifications.
-     * Automatically refreshes the offer list when a transaction occurs on the Escrow program.
-     */
     useEffect(() => {
         let abortController = new AbortController();
         let timeout: ReturnType<typeof setTimeout>;
@@ -76,14 +63,11 @@ export function TakeOffer() {
                     .subscribe({ abortSignal: abortController.signal });
 
                 for await (const _notif of notifications) {
-                    // Debounce refresh to avoid spam if multiple transactions occur
                     clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        void loadOffers();
-                    }, 500);
+                    timeout = setTimeout(() => { void loadOffers(); }, 500);
                 }
-            } catch (e: any) {
-                if (e.name !== 'AbortError') console.error('WS Error:', e);
+            } catch (e: unknown) {
+                if (e instanceof Error && e.name !== 'AbortError') console.error('WS Error:', e);
             }
         }
         setupWebsocket();
@@ -94,46 +78,96 @@ export function TakeOffer() {
         };
     }, [loadOffers]);
 
-    /**
-     * Executes the 'take_offer' transaction for a specific offer.
-     * 
-     * @param offer - The offer account to accept.
-     * @returns A promise resolving to either the signature or an error message.
-     */
+    const visibleOffers = useMemo(() => {
+        if (filter === 'mine' && walletAddress) {
+            return offers.filter((o) => o.data.maker === walletAddress);
+        }
+        return offers;
+    }, [offers, filter, walletAddress]);
+
     async function handleTake(offer: OfferAccount): Promise<{ sig: string } | { error: string }> {
         if (!wallet) return { error: 'Wallet not connected.' };
         try {
-            const signer = createWalletTransactionSigner(wallet);
+            const { signer } = createWalletTransactionSigner(wallet);
             const ix = await getTakeOfferInstructionAsync({
-                taker: signer.signer,
+                taker: signer,
                 maker: address(offer.data.maker),
                 tokenMintA: address(offer.data.tokenMintA),
                 tokenMintB: address(offer.data.tokenMintB),
                 offer: address(offer.pubkey as `${string}`),
             });
-            const sig = await executeTransaction(signer.signer, [ix]);
-            // Allow the OfferCard to display the success state and link
+            const sig = await executeTransaction(signer, [ix]);
             return { sig };
         } catch (err) {
             return { error: parseError(err) };
         }
     }
 
-    /* ── Render ──────────────────────────────────────────────── */
+    const myCount = walletAddress
+        ? offers.filter((o) => o.data.maker === walletAddress).length
+        : 0;
 
     return (
         <div className="space-y-4">
             {/* Header bar */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h2 className="text-base font-semibold text-slate-100">Open Offers</h2>
-                <button
-                    onClick={() => void loadOffers()}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 disabled:opacity-50"
-                >
-                    <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
+
+                <div className="flex items-center gap-2">
+                    {/* Filter tabs */}
+                    {connected && (
+                        <div className="flex rounded-lg border border-slate-700 bg-slate-800/60 p-0.5 text-xs">
+                            <button
+                                onClick={() => setFilter('all')}
+                                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                                    filter === 'all'
+                                        ? 'bg-indigo-500 text-white shadow'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            >
+                                All
+                                {offers.length > 0 && (
+                                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                        filter === 'all'
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-slate-700 text-slate-300'
+                                    }`}>
+                                        {offers.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setFilter('mine')}
+                                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                                    filter === 'mine'
+                                        ? 'bg-indigo-500 text-white shadow'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            >
+                                My offers
+                                {myCount > 0 && (
+                                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                        filter === 'mine'
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-slate-700 text-slate-300'
+                                    }`}>
+                                        {myCount}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Refresh button */}
+                    <button
+                        onClick={() => void loadOffers()}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {!connected && (
@@ -189,17 +223,26 @@ export function TakeOffer() {
                 </div>
             )}
 
-            {/* Empty state */}
-            {!loading && !fetchError && offers.length === 0 && (
+            {/* Empty states */}
+            {!loading && !fetchError && visibleOffers.length === 0 && (
                 <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-10 text-center text-slate-500 text-sm space-y-2">
                     <Inbox className="mx-auto h-8 w-8 text-slate-700" />
-                    <p>No open offers found.</p>
-                    <p className="text-xs">Be the first to make one!</p>
+                    {filter === 'mine' ? (
+                        <>
+                            <p>You have no open offers.</p>
+                            <p className="text-xs">Switch to the Make Offer tab to create one.</p>
+                        </>
+                    ) : (
+                        <>
+                            <p>No open offers found.</p>
+                            <p className="text-xs">Be the first to make one!</p>
+                        </>
+                    )}
                 </div>
             )}
 
             {/* Offer cards */}
-            {!loading && offers.map((offer) => (
+            {!loading && visibleOffers.map((offer) => (
                 <OfferCard key={offer.pubkey} offer={offer} onTake={handleTake} />
             ))}
         </div>
